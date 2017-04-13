@@ -1,6 +1,8 @@
 #include <iostream>
 #include <cstdlib>
+#include <omp.h>
 
+using namespace std;
 
 #define XMIN	 0.
 #define XMAX	 3.
@@ -48,13 +50,46 @@
 #define BOTZ33  -3.
 
 
-float
-Height( int iu, int iv )	
-{
-	float u = (float)iu / (float)(NUMNODES-1);
-	float v = (float)iv / (float)(NUMNODES-1);
+float Height(int, int);
 
+int main(){
 	
+	int NUMTHREADS = 4;
+	//int NUMNODES;
+	double total = 0;
+	float height;
+
+	float fullTileArea = (  ( (XMAX-XMIN)/(float)(NUMNODES-1) )  *  ( ( YMAX - YMIN )/(float)(NUMNODES-1) )  );
+	omp_set_num_threads(NUMTHREADS);
+
+	#pragma omp parallel for reduction(+:total),private(height)
+	for( int i = 0; i < NUMNODES*NUMNODES; i++ )
+	{
+		int iu = i % NUMNODES;
+		int iv = i / NUMNODES;
+
+		height = Height(iu, iv);
+		double volume = height * fullTileArea;
+
+		if(iv == 0 || iu == 0 || iv == (NUMNODES - 1) || iu == (NUMNODES - 1))	//divide edges by 2
+			volume *= 0.5;
+		if(iv == 0 && ( iu == 0 || iu == (NUMNODES - 1)))	//divide bottom corners by 2 again
+			volume *= 0.5;
+		else if(iv == (NUMNODES - 1) && (iu == 0 || iu == (NUMNODES - 1))) 	//divide upper corners by 2;
+			volume *= .5;
+
+		total += volume;	
+	}
+
+	cout << "total: " << total  << endl;
+
+	return 0;
+}
+
+float Height( int iu, int iv){
+
+	float u = (float)iu / (float)(NUMNODES-1);
+	float v = (float)iv / (float)(NUMNODES-1);	
 
 	float bu0 = (1.-u) * (1.-u) * (1.-u);
 	float bu1 = 3. * u * (1.-u) * (1.-u);
@@ -65,9 +100,6 @@ Height( int iu, int iv )
 	float bv1 = 3. * v * (1.-v) * (1.-v);
 	float bv2 = 3. * v * v * (1.-v);
 	float bv3 = v * v * v;
-
-	
-
 
         float top =       bu0 * ( bv0*TOPZ00 + bv1*TOPZ01 + bv2*TOPZ02 + bv3*TOPZ03 )
                         + bu1 * ( bv0*TOPZ10 + bv1*TOPZ11 + bv2*TOPZ12 + bv3*TOPZ13 )
@@ -80,15 +112,4 @@ Height( int iu, int iv )
                         + bu3 * ( bv0*BOTZ30 + bv1*BOTZ31 + bv2*BOTZ32 + bv3*BOTZ33 );
 
         return top - bot;	
-}
-
-int main(){
-
-
-
-
-
-
-
-	return 0;
 }
