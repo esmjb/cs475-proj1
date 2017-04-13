@@ -54,34 +54,49 @@ float Height(int, int);
 
 int main(){
 	
-	int NUMTHREADS = 4;
+	//int NUMTHREADS = 4;
 	//int NUMNODES;
 	double total = 0;
-	float height;
+	float height;	
 
 	float fullTileArea = (  ( (XMAX-XMIN)/(float)(NUMNODES-1) )  *  ( ( YMAX - YMIN )/(float)(NUMNODES-1) )  );
 	omp_set_num_threads(NUMTHREADS);
 
-	#pragma omp parallel for reduction(+:total),private(height)
-	for( int i = 0; i < NUMNODES*NUMNODES; i++ )
-	{
-		int iu = i % NUMNODES;
-		int iv = i / NUMNODES;
+	double peakMegaCalcs = 0;
+	double sumMegaCalcs = 0;
 
-		height = Height(iu, iv);
-		double volume = height * fullTileArea;
+	for(int j = 0; j < 10; j++){	//do each test 10 times
+	
+		double time0 = omp_get_wtime();
+		#pragma omp parallel for reduction(+:total),private(height)
+		for( int i = 0; i < NUMNODES*NUMNODES; i++ )
+		{
+			int iu = i % NUMNODES;
+			int iv = i / NUMNODES;
 
-		if(iv == 0 || iu == 0 || iv == (NUMNODES - 1) || iu == (NUMNODES - 1))	//divide edges by 2
-			volume *= 0.5;
-		if(iv == 0 && ( iu == 0 || iu == (NUMNODES - 1)))	//divide bottom corners by 2 again
-			volume *= 0.5;
-		else if(iv == (NUMNODES - 1) && (iu == 0 || iu == (NUMNODES - 1))) 	//divide upper corners by 2;
-			volume *= .5;
+			height = Height(iu, iv);
+			double volume = height * fullTileArea;
 
-		total += volume;	
+			if(iv == 0 || iu == 0 || iv == (NUMNODES - 1) || iu == (NUMNODES - 1))	//divide edges by 2
+				volume *= 0.5;
+			if(iv == 0 && ( iu == 0 || iu == (NUMNODES - 1)))	//divide bottom corners by 2 again
+				volume *= 0.5;
+			else if(iv == (NUMNODES - 1) && (iu == 0 || iu == (NUMNODES - 1))) 	//divide upper corners by 2;
+				volume *= .5;
+
+			total += volume;	
+		}
+		double time1 = omp_get_wtime();
+		double megaCalcs = NUMNODES * NUMNODES / (time1 - time0) / 1000000;
+		if(megaCalcs > peakMegaCalcs)
+			peakMegaCalcs = megaCalcs;
+		sumMegaCalcs += megaCalcs; 
+		
 	}
 
-	cout << "total: " << total  << endl;
+	cout << "total: " << total/ 10  << endl;
+	cout << "peak megacalcs: " << peakMegaCalcs << endl;
+	cout << "average megacalcs: " << sumMegaCalcs / 10 << endl;
 
 	return 0;
 }

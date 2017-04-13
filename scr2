@@ -1,0 +1,18 @@
+#!/bin/bash
+
+
+#number of nodes:
+for n in 100 1000 10000
+do	
+	for t in 1 4 8
+	do
+	
+		echo NUMNODES=$n
+		echo NUMTHREADS=$t
+		g++ -DNUMNODES=$n -DNUMTHREADS=$t -o prog1 proj1.cpp -lm -fopenmp
+		./prog1
+		echo 
+	done
+done
+
+
